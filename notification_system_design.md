@@ -103,3 +103,37 @@ if an admin hits "notify all", inserting 50,000 rows sequentially will lock up t
 1. partition the `student_notifications` table by student_id or date ranges.
 2. do async batch inserts instead of waiting in the main request loop.
 3. use pgbouncer for connection pooling so the db doesn't run out of connections during traffic spikes.
+
+## stage 3 - query optimization
+
+here's the bad query everyone writes first:
+```sql
+SELECT * FROM notifications 
+WHERE student_id = 1042 AND is_read = false 
+ORDER BY created_at DESC;
+```
+
+### why is it slow?
+1. `SELECT *` pulls all columns. bad for memory/io.
+2. no `LIMIT` means it could return thousands of rows.
+3. without a composite index on `student_id` and `is_read`, postgres is forced to do a sequential scan over 5M rows. 
+4. sorting everything in memory because of `ORDER BY` without a matching index.
+
+### the fix: composite covering index
+don't index every single column (that kills write performance and bloats storage). instead, build a targeted index for this exact read query:
+
+```sql
+CREATE INDEX idx_notifications_unread_feed 
+ON notifications (student_id, is_read, created_at DESC) 
+INCLUDE (message, type);
+```
+this creates an index scan that already has the required data (`message`, `type`) inside the index leaves.
+
+### the optimized query
+```sql
+SELECT id, type, message, is_read, created_at
+FROM notifications
+WHERE student_id = 1042 AND is_read = FALSE
+ORDER BY created_at DESC
+LIMIT 20 OFFSET 0;
+```
