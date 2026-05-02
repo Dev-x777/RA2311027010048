@@ -156,3 +156,40 @@ here is my recommended setup to drop db load by 90%:
 
 **4. db read replicas (future proofing)**
 - if caching isn't enough, spin up a read replica for postgres. write operations go to master, and all the `SELECT` queries go to the replica.
+
+## stage 5 - bulk notify reliability
+
+the old code looped through 50,000 students synchronously, sending emails and saving to db in the same thread. if the email api timed out on student #20, the loop crashed and 49,980 students got nothing. bad design.
+
+**the fix: use a message queue**
+decouple the db insertion from the email sending. here is the revised pseudocode:
+
+```text
+// main route handler
+function trigger_bulk_notify(student_ids, msg) {
+  // 1. insert the notification to db instantly (source of truth)
+  const n_id = db.insert_notification(msg);
+  
+  // 2. batch insert to mapping table
+  db.batch_insert_student_notifications(student_ids, n_id);
+
+  // 3. toss it in a queue, don't wait for emails to actually send
+  for (let id of student_ids) {
+    message_queue.push("email_tasks", { id, n_id, msg });
+  }
+
+  return { success: true, status: "queued" };
+}
+
+// background worker process
+worker.listen("email_tasks", (job) => {
+  try {
+    send_email(job.id, job.msg);
+  } catch (err) {
+    // throw back to queue for a retry with exponential backoff
+    throw err; 
+  }
+});
+```
+
+this way, an email failure doesn't crash the whole process. the queue handles retries for that specific user.
