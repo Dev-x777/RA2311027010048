@@ -1,3 +1,11 @@
 fetching top priority inbox...
-failed to fetch notifications. status: 401
-no notifications returned.
+1. [Placement] Booking Holdings Inc. hiring | 2026-05-01 23:44:21
+2. [Placement] Eli Lilly and Company hiring | 2026-05-01 23:43:57
+3. [Placement] Nvidia Corporation hiring | 2026-05-01 20:45:09
+4. [Placement] Amazon.com Inc. hiring | 2026-05-01 18:14:09
+5. [Placement] Eli Lilly and Company hiring | 2026-05-01 18:13:45
+6. [Result] internal | 2026-05-02 05:15:27
+7. [Result] end-sem | 2026-05-02 00:13:39
+8. [Result] end-sem | 2026-05-01 23:15:33
+9. [Result] end-sem | 2026-05-01 22:44:03
+10. [Result] project-review | 2026-05-01 18:15:15
