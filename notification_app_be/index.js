@@ -1,3 +1,7 @@
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 4000;
+
 const API_TOKEN = process.env.ACCESS_TOKEN || '';
 const API_URL = 'http://20.207.122.201/evaluation-service/notifications';
 
@@ -9,52 +13,42 @@ const weightMap = {
 
 const getScore = (notif) => {
   const w = weightMap[notif.Type] || 0;
-  // get seconds from the timestamp
   const timeSecs = Math.floor(new Date(notif.Timestamp).getTime() / 1000);
   return (w * 1000000000) + timeSecs;
 };
 
 const fetchTopPriority = async (limit = 10) => {
   if (!API_TOKEN) {
-    console.log('no token provided. make sure to set ACCESS_TOKEN in env.');
-    return [];
+    throw new Error('no token provided');
   }
 
-  try {
-    const res = await fetch(API_URL, {
-      headers: { 'Authorization': `Bearer ${API_TOKEN}` }
-    });
-    
-    if (!res.ok) {
-      console.log('failed to fetch notifications. status:', res.status);
-      return [];
-    }
-    
-    const body = await res.json();
-    const list = body.notifications || [];
-
-    // sort highest score first
-    list.sort((a, b) => getScore(b) - getScore(a));
-
-    return list.slice(0, limit);
-  } catch (err) {
-    console.error('error pulling notifications:', err);
-    return [];
-  }
-};
-
-const run = async () => {
-  console.log('fetching top priority inbox...');
-  const top10 = await fetchTopPriority(10);
-  
-  if (!top10 || top10.length === 0) {
-    console.log('no notifications returned.');
-    return;
-  }
-
-  top10.forEach((item, idx) => {
-    console.log(`${idx + 1}. [${item.Type}] ${item.Message} | ${item.Timestamp}`);
+  const res = await fetch(API_URL, {
+    headers: { 'Authorization': `Bearer ${API_TOKEN}` }
   });
+  
+  if (!res.ok) {
+    throw new Error('failed to fetch notifications');
+  }
+  
+  const body = await res.json();
+  const list = body.notifications || [];
+
+  list.sort((a, b) => getScore(b) - getScore(a));
+
+  return list.slice(0, limit);
 };
 
-run();
+app.get('/priority-inbox', async (req, res) => {
+  try {
+    const top10 = await fetchTopPriority(10);
+    res.json({ success: true, priority_inbox: top10 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "failed to load priority inbox" });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`notification app running on port ${port}`);
+});
+

@@ -206,3 +206,6 @@ for the priority inbox, we need to sort incoming notifications by type first (pl
 if this had to run continuously as a stream on the backend, running `.sort()` on thousands of items every time would be `O(n log n)`.
 to optimize it, we should use a **min-heap (priority queue)** of size `N` (where N is the number of items we want to keep, like 10).
 whenever a new notification arrives, we calculate its score. if the score is greater than the root of our min-heap, we pop the root and push the new one. this gives us `O(log k)` insertion time, which is much faster for a live stream.
+
+### final priority inbox output
+![Priority Inbox Output](./notification_app_be/Screenshot%202026-05-02%20at%2011.48.17.png)

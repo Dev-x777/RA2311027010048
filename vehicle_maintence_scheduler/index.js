@@ -66,6 +66,24 @@ const getVehicles = async () => {
   return data.vehicles || [];
 };
 
+app.get('/depots', async (req, res) => {
+  try {
+    const data = await getDepots();
+    res.json({ depots: data });
+  } catch (e) {
+    res.status(500).json({ error: "failed to fetch depots" });
+  }
+});
+
+app.get('/vehicles', async (req, res) => {
+  try {
+    const data = await getVehicles();
+    res.json({ vehicles: data });
+  } catch (e) {
+    res.status(500).json({ error: "failed to fetch vehicles" });
+  }
+});
+
 app.get('/schedule', async (req, res) => {
   try {
     await Log("backend", "info", "handler", "computing schedules now");
