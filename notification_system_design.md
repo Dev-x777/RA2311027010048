@@ -137,3 +137,22 @@ WHERE student_id = 1042 AND is_read = FALSE
 ORDER BY created_at DESC
 LIMIT 20 OFFSET 0;
 ```
+
+## stage 4 - caching & performance
+
+the biggest issue is 50,000 students hitting the db for notifications every time they load the dashboard.
+here is my recommended setup to drop db load by 90%:
+
+**1. redis cache for unread counts**
+- the unread badge is the most requested piece of data. caching it is essential.
+- use key: `notifications:unread:{student_id}` with a 60 second ttl.
+- when they mark something as read, or a new notification drops, just bust that cache key.
+
+**2. never fetch all**
+- always paginate. loading 500 notifications at once on page load is a terrible idea.
+
+**3. use the unread count endpoint**
+- instead of pulling the whole list on page load, the frontend only pulls the `unread-count`. it only fetches the actual list when the user explicitly clicks the notification bell.
+
+**4. db read replicas (future proofing)**
+- if caching isn't enough, spin up a read replica for postgres. write operations go to master, and all the `SELECT` queries go to the replica.
