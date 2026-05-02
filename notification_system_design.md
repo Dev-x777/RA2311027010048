@@ -193,3 +193,16 @@ worker.listen("email_tasks", (job) => {
 ```
 
 this way, an email failure doesn't crash the whole process. the queue handles retries for that specific user.
+
+## stage 6 - priority inbox
+
+for the priority inbox, we need to sort incoming notifications by type first (placement > result > event), and then by time.
+
+**approach:**
+- assign weights: placement = 3, result = 2, event = 1.
+- calculate a composite score: `(weight * 1,000,000,000) + unix_timestamp`
+- this guarantees that type always overrides the timestamp, but within the same type, newer messages score higher.
+
+if this had to run continuously as a stream on the backend, running `.sort()` on thousands of items every time would be `O(n log n)`.
+to optimize it, we should use a **min-heap (priority queue)** of size `N` (where N is the number of items we want to keep, like 10).
+whenever a new notification arrives, we calculate its score. if the score is greater than the root of our min-heap, we pop the root and push the new one. this gives us `O(log k)` insertion time, which is much faster for a live stream.
